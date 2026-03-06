@@ -1,0 +1,36 @@
+# Environment variables - NEVER commit
+.env
+.env.local
+.env.production
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# IDE
+.vscode/*
+.idea
+.DS_Store
+
+# Logs
+*.log
+
+# pytest
+.pytest_cache/
+
+# mypy
+.mypy_cache/
