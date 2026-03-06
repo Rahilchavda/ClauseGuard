@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+groq
+pymongo[srv]
+motor
+python-multipart
+pydantic
+pypdf2
