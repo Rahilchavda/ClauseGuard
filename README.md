@@ -206,24 +206,66 @@ npm run dev
 
 ---
 
-# 📷 Screenshots
+# 🏗️ System Architecture
 
-### Analyze Page
-
-AI scans contracts and detects risky clauses.
-
-### Results Page
-
-Shows clause risk levels with explanations and suggestions.
-
-### Dashboard
-
-Displays analytics about analyzed contracts.
-
-### History
-
-View previously analyzed documents.
-
+### ClauseGuard follows a modern full-stack architecture where the frontend interacts with an API backend, which processes documents and calls an AI model for clause analysis.
+                        ┌─────────────────────────┐
+                        │        User             │
+                        │ Upload / Paste Contract │
+                        └─────────────┬───────────┘
+                                      │
+                                      ▼
+                        ┌─────────────────────────┐
+                        │       Frontend          │
+                        │        (React)          │
+                        │                         │
+                        │ • Document Upload       │
+                        │ • Results Viewer        │
+                        │ • Dashboard Analytics   │
+                        │ • History & Compare     │
+                        └─────────────┬───────────┘
+                                      │ API Calls
+                                      ▼
+                        ┌─────────────────────────┐
+                        │        Backend          │
+                        │      Node.js / API      │
+                        │                         │
+                        │ • File Parsing          │
+                        │ • Clause Extraction     │
+                        │ • Risk Scoring Logic    │
+                        │ • History Storage       │
+                        └─────────────┬───────────┘
+                                      │
+                                      ▼
+                        ┌─────────────────────────┐
+                        │      AI Engine          │
+                        │    Groq + Llama/Mistral │
+                        │                         │
+                        │ • Clause Classification │
+                        │ • Risk Detection        │
+                        │ • Ambiguity Detection   │
+                        │ • Suggested Fixes       │
+                        └─────────────┬───────────┘
+                                      │
+                                      ▼
+                        ┌─────────────────────────┐
+                        │   Structured Analysis   │
+                        │                         │
+                        │ • Clause Results        │
+                        │ • Risk Score            │
+                        │ • Category Breakdown    │
+                        │ • Explanations          │
+                        └─────────────┬───────────┘
+                                      │
+                                      ▼
+                        ┌─────────────────────────┐
+                        │      Frontend UI        │
+                        │                         │
+                        │ • Clause Cards          │
+                        │ • Risk Gauge            │
+                        │ • Dashboard Charts      │
+                        │ • History Tracking      │
+                        └─────────────────────────┘
 ---
 
 # 🔐 Security & Limitations
