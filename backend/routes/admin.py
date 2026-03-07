@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from dotenv import load_dotenv
 import jwt, os
 
@@ -22,7 +22,7 @@ def admin_login(body: LoginRequest):
         {
             "email": body.email,
             "role":  body.role,
-            "exp":   datetime.utcnow() + timedelta(days=7)
+            "exp":   datetime.now(timezone.utc) + timedelta(days=7)
         },
         os.getenv("JWT_SECRET", "fallback-secret"),
         algorithm="HS256"

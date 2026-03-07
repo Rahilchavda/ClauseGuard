@@ -13,9 +13,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",        # Vite dev server
-        "https://*.vercel.app",          # your deployed frontend
         "https://clause-guard-nine.vercel.app",
-     
+        "https://clause-guard-git-main-rahilchavdas-projects.vercel.app",
+        "https://*.vercel.app",  
     ],
     allow_methods=["*"],
     allow_headers=["*"],
