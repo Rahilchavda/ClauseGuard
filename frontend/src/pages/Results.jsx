@@ -4,6 +4,7 @@ import RiskGauge from "../components/RiskGauge";
 import ClauseCard from "../components/ClauseCard";
 import { useThemeContext } from "../context/ThemeContext";
 import { exportToPdf } from "../utils/exportPdf";
+import SeverityHeatmap from "../components/SeverityHeatmap";
 export default function Results() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -15,6 +16,27 @@ export default function Results() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("risk");
 
+  const [emailInput, setEmailInput] = useState("");
+  const [emailSent,  setEmailSent]  = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+
+  const sendEmail = async () => {
+    if (!emailInput || !results.id) return;
+    setEmailLoading(true);
+    try {
+      const form = new FormData();
+      form.append("email", emailInput);
+      await fetch(
+        `${import.meta.env.VITE_API_URL}/email-report/${results.id}`,
+        { method: "POST", body: form }
+      );
+      setEmailSent(true);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setEmailLoading(false);
+    }
+  };
   
   const card = {
     background: isDark ? "rgba(15,23,42,0.85)" : "#ffffff",
@@ -110,9 +132,12 @@ export default function Results() {
         (a.category || "").localeCompare(b.category || "")
       );
     }
-
+    
     return list;
   }, [results.clauses, search, riskFilter, catFilter, sortBy]);
+
+  
+  
 
   const filterBtn = (val, current) => ({
     padding: "6px 14px",
@@ -131,6 +156,7 @@ export default function Results() {
   });
 
   return (
+    
     <div
       style={{
         minHeight: "100vh",
@@ -171,6 +197,7 @@ export default function Results() {
     boxShadow: "0 4px 12px rgba(99,102,241,0.35)"
   }}
 >
+  
   📥 Export PDF Report
 </button>
               {results.docName}
@@ -186,7 +213,7 @@ export default function Results() {
             >
               {results.summary}
             </p>
-
+              
             <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
               {[["High", "#ef4444"], ["Medium", "#f59e0b"], ["Low", "#22c55e"]].map(
                 ([lvl, color]) => (
@@ -198,7 +225,7 @@ export default function Results() {
                   </div>
                 )
               )}
-
+              
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: "24px", fontWeight: 800, color: "#94a3b8" }}>
                   {results.clauses.length}
@@ -208,7 +235,9 @@ export default function Results() {
             </div>
           </div>
         </div>
-
+        <div>
+      <SeverityHeatmap clauses={results.clauses} isDark={isDark} />
+    </div>
         {/* Search + Filters */}
         <div style={{ ...card, marginBottom: "12px" }}>
           <div style={{ display: "flex", gap: "10px", marginBottom: "14px", flexWrap: "wrap" }}>

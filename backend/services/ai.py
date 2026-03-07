@@ -22,7 +22,8 @@ The JSON must follow this exact structure:
       "category": "Liability",
       "reasoning": "This is risky because...",
       "suggestedWording": "Better version of this clause...",
-      "ambiguous": false
+      "ambiguous": false,
+      "negotiationScore": 75
     }
   ],
   "summary": "Overall summary of this section"
@@ -31,10 +32,19 @@ The JSON must follow this exact structure:
 riskLevel must be exactly one of: High, Medium, Low
 category must be exactly one of: Liability, Indemnification, Data Privacy, IP Rights, Termination, Payment, Confidentiality, Dispute Resolution, Ambiguous Language, Compliance, Other
 ambiguous must be true or false
+negotiationScore must be a number 0-100 where:
+  0-25  = Very hard to negotiate (standard legal boilerplate)
+  26-50 = Somewhat negotiable (common but can be pushed back)
+  51-75 = Moderately negotiable (company-specific, flexible)
+  76-100 = Highly negotiable (company-specific, high flexibility)
 
 Find ALL risky clauses. Aim to find at least 3-5 clauses per section.
 Do NOT return empty clauses array. Always find something to flag.
-RETURN ONLY JSON. NO OTHER TEXT."""
+RETURN ONLY JSON. NO OTHER TEXT.
+
+For ambiguous field: set true if the clause uses vague terms like
+"reasonable", "may", "at its discretion", "from time to time",
+"as appropriate", or any language that is intentionally unclear."""
 
 
 def extract_json(text: str) -> dict:

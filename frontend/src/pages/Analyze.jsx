@@ -1,15 +1,14 @@
 import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAnalyzer } from "../hooks/useAnalyzer";
 import ClauseCard from "../components/ClauseCard";
 import RiskGauge from "../components/RiskGauge";
+import SeverityHeatmap from "../components/SeverityHeatmap";
+import UploadZone from "../components/UploadZone";
 
 export default function Analyze() {
   const [docText, setDocText] = useState("");
   const [docName, setDocName] = useState("");
-  const [dragOver, setDragOver] = useState(false);
-  const fileRef = useRef();
-  const navigate = useNavigate();
+  const [inputMode, setInputMode] = useState("upload"); // "upload" | "paste"
 
   const {
     clauses,
@@ -21,56 +20,23 @@ export default function Analyze() {
     status,
     error,
     runText,
-    runFile,
     cancel,
     reset,
   } = useAnalyzer();
 
   const isLoading = status === "loading";
-  const isDone = status === "done";
+  const isDone    = status === "done";
 
-  // ── File reading ──────────────────────────────────────────────────
-  const readFile = async (file) => {
-    setDocName(file.name);
-
-    if (file.type === "application/pdf") {
-      if (!window.pdfjsLib) {
-        await loadScript(
-          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"
-        );
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-      }
-
-      const buffer = await file.arrayBuffer();
-      const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
-
-      let text = "";
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        text += content.items.map((x) => x.str).join(" ") + "\n";
-      }
-
-      setDocText(text);
-    } else {
-      setDocText(await file.text());
-    }
+  const counts = {
+    High:   clauses.filter((c) => c.riskLevel === "High").length,
+    Medium: clauses.filter((c) => c.riskLevel === "Medium").length,
+    Low:    clauses.filter((c) => c.riskLevel === "Low").length,
   };
 
-  function loadScript(src) {
-    return new Promise((res, rej) => {
-      const s = document.createElement("script");
-      s.src = src;
-      s.onload = res;
-      s.onerror = rej;
-      document.head.appendChild(s);
-    });
-  }
-
   const handleAnalyze = () => {
-    if (docText) runText(docText, docName || "Untitled Document");
+    if (docText.trim()) {
+      runText(docText, docName || "Untitled Document");
+    }
   };
 
   const handleReset = () => {
@@ -79,10 +45,19 @@ export default function Analyze() {
     setDocName("");
   };
 
-  const counts = {
-    High: clauses.filter((c) => c.riskLevel === "High").length,
-    Medium: clauses.filter((c) => c.riskLevel === "Medium").length,
-    Low: clauses.filter((c) => c.riskLevel === "Low").length,
+  // ── Called by UploadZone when files are added/removed ──
+  const handleFilesReady = (files) => {
+    if (files.length === 0) {
+      setDocText("");
+      setDocName("");
+      return;
+    }
+    // Combine all files into one analysis separated by a divider
+    const combined = files.map((f) => f.text).join("\n\n---\n\n");
+    const name =
+      files.length === 1 ? files[0].name : `${files.length} documents`;
+    setDocText(combined);
+    setDocName(name);
   };
 
   return (
@@ -100,244 +75,210 @@ export default function Analyze() {
           from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: translateY(0); }
         }
-
         @keyframes pulse-ring {
           0%   { transform: scale(0.95); opacity: 0.6; }
           50%  { transform: scale(1.05); opacity: 1; }
           100% { transform: scale(0.95); opacity: 0.6; }
         }
+        @keyframes shimmer {
+          0%   { background-position: -200% center; }
+          100% { background-position:  200% center; }
+        }
 
-        .clause-appear { animation: fadeSlideIn 0.4s ease forwards; }
+        .clause-appear   { animation: fadeSlideIn 0.4s ease forwards; }
         .analyzing-pulse { animation: pulse-ring 1.5s ease-in-out infinite; }
+
+        textarea:focus, input:focus { outline: none; }
+        textarea::placeholder, input::placeholder { color: #475569; }
       `}</style>
 
       <div
         className="max-w-3xl mx-auto px-6 py-10"
         style={{ fontFamily: "'DM Sans', system-ui, sans-serif" }}
       >
-        {/* HERO */}
+
+        {/* ── HERO / UPLOAD STATE ───────────────────────────────────── */}
         {status === "idle" && (
           <div>
+
+            {/* Heading */}
             <div className="text-center mb-10">
-              <div
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  padding: "6px 14px",
-                  borderRadius: "999px",
-                  border: "1px solid #334155",
-                  background: "rgba(15,23,42,0.6)",
-                  marginBottom: "24px",
-                }}
-              >
-                <span
-                  className="analyzing-pulse"
-                  style={{
-                    width: "6px",
-                    height: "6px",
-                    borderRadius: "50%",
-                    background: "#94a3b8",
-                    display: "inline-block",
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: "12px",
-                    color: "#cbd5f5",
-                    fontWeight: 600,
-                    letterSpacing: "0.08em",
-                  }}
-                >
+              <div style={{
+                display: "inline-flex", alignItems: "center", gap: "8px",
+                padding: "6px 14px", borderRadius: "999px",
+                border: "1px solid #334155", background: "rgba(15,23,42,0.6)",
+                marginBottom: "24px",
+              }}>
+                <span className="analyzing-pulse" style={{
+                  width: "6px", height: "6px", borderRadius: "50%",
+                  background: "#94a3b8", display: "inline-block",
+                }} />
+                <span style={{
+                  fontSize: "12px", color: "#cbd5e1", fontWeight: 600,
+                  letterSpacing: "0.08em",
+                }}>
                   POWERED BY LLAMA 3.3 70B
                 </span>
               </div>
 
-              <h1
-                style={{
-                  fontFamily: "'DM Serif Display', serif",
-                  fontSize: "clamp(32px, 5vw, 48px)",
-                  color: "#f8fafc",
-                  lineHeight: 1.15,
-                  marginBottom: "12px",
-                }}
-              >
+              <h1 style={{
+                fontFamily: "'DM Serif Display', serif",
+                fontSize: "clamp(32px, 5vw, 48px)",
+                color: "#f8fafc", lineHeight: 1.15, marginBottom: "12px",
+              }}>
                 Uncover Hidden Risks
                 <br />
-                <span style={{ fontStyle: "italic", color: "#cbd5f5" }}>
+                <span style={{ fontStyle: "italic", color: "#94a3b8" }}>
                   Before You Sign
                 </span>
               </h1>
 
-              <p style={{ color: "#94a3b8", fontSize: "15px" }}>
+              <p style={{ color: "#64748b", fontSize: "15px" }}>
                 AI-powered contract analysis. Results stream in real time.
               </p>
             </div>
 
-            {/* Drop zone */}
-            <div
-              onClick={() => fileRef.current?.click()}
-              onDragOver={(e) => {
-                e.preventDefault();
-                setDragOver(true);
-              }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={(e) => {
-                e.preventDefault();
-                setDragOver(false);
-                const f = e.dataTransfer.files[0];
-                if (f) readFile(f);
-              }}
-              style={{
-                border: `2px dashed ${
-                  dragOver ? "#64748b" : docText ? "#22c55e" : "#334155"
-                }`,
-                borderRadius: "20px",
-                padding: "48px 24px",
-                textAlign: "center",
-                cursor: "pointer",
-                background: dragOver
-                  ? "rgba(148,163,184,0.06)"
-                  : docText
-                  ? "rgba(34,197,94,0.05)"
-                  : "rgba(15,23,42,0.55)",
-                backdropFilter: "blur(6px)",
-              }}
-            >
-              <input
-                ref={fileRef}
-                type="file"
-                className="hidden"
-                accept=".pdf,.txt,.md"
-                onChange={(e) =>
-                  e.target.files[0] && readFile(e.target.files[0])
-                }
-              />
-
-              <div style={{ fontSize: "48px", marginBottom: "12px" }}>
-                {docText ? "✅" : "📄"}
-              </div>
-
-              <div
-                style={{
-                  fontSize: "16px",
-                  fontWeight: 700,
-                  marginBottom: "6px",
-                  color: docText ? "#22c55e" : "#f8fafc",
-                }}
-              >
-                {docText ? docName : "Drop your contract here"}
-              </div>
-
-              <div style={{ fontSize: "13px", color: "#64748b" }}>
-                {docText
-                  ? `${docText
-                      .split(/\s+/)
-                      .length.toLocaleString()} words · click to replace`
-                  : "PDF or TXT · or click to browse"}
-              </div>
+            {/* ── Input mode toggle ── */}
+            <div style={{
+              display: "flex", gap: "4px", marginBottom: "16px",
+              background: "rgba(15,23,42,0.6)", padding: "4px",
+              borderRadius: "12px", border: "1px solid #1e293b",
+              width: "fit-content",
+            }}>
+              {[
+                { key: "upload", label: "📂 Upload Files" },
+                { key: "paste",  label: "📋 Paste Text"  },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setInputMode(key)}
+                  style={{
+                    padding: "8px 18px", borderRadius: "8px", border: "none",
+                    background: inputMode === key ? "#1e293b" : "transparent",
+                    color: inputMode === key ? "#f1f5f9" : "#64748b",
+                    fontWeight: 600, fontSize: "13px", cursor: "pointer",
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
-            {/* textarea */}
-            <div style={{ marginTop: "16px" }}>
-              <textarea
-                rows={5}
-                placeholder="Paste contract or policy text here…"
-                value={docText}
-                onChange={(e) => {
-                  setDocText(e.target.value);
-                  if (!docName) setDocName("Pasted Document");
-                }}
-                style={{
-                  width: "100%",
-                  padding: "14px 16px",
-                  borderRadius: "14px",
-                  border: "1px solid #334155",
-                  background: "rgba(15,23,42,0.6)",
-                  color: "#e2e8f0",
-                  fontSize: "13px",
-                  resize: "vertical",
-                }}
-              />
-            </div>
+            {/* ── Upload mode: UploadZone ── */}
+            {inputMode === "upload" && (
+              <UploadZone onFilesReady={handleFilesReady} loading={isLoading} />
+            )}
 
+            {/* ── Paste mode: textarea ── */}
+            {inputMode === "paste" && (
+              <div>
+                <textarea
+                  rows={8}
+                  placeholder="Paste contract or policy text here…"
+                  value={docText}
+                  onChange={(e) => {
+                    setDocText(e.target.value);
+                    if (!docName) setDocName("Pasted Document");
+                  }}
+                  style={{
+                    width: "100%", padding: "14px 16px", borderRadius: "14px",
+                    border: "1px solid #334155", background: "rgba(15,23,42,0.6)",
+                    color: "#e2e8f0", fontSize: "13px", resize: "vertical",
+                    lineHeight: 1.6, fontFamily: "inherit",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            )}
+
+            {/* ── Document name field ── */}
             {docText && (
               <input
                 value={docName}
                 onChange={(e) => setDocName(e.target.value)}
                 placeholder="Document name…"
                 style={{
-                  width: "100%",
-                  marginTop: "10px",
-                  padding: "12px 16px",
-                  borderRadius: "12px",
-                  border: "1px solid #334155",
-                  background: "rgba(15,23,42,0.6)",
-                  color: "#e2e8f0",
-                  fontSize: "13px",
+                  width: "100%", marginTop: "10px", padding: "12px 16px",
+                  borderRadius: "12px", border: "1px solid #334155",
+                  background: "rgba(15,23,42,0.6)", color: "#e2e8f0",
+                  fontSize: "13px", fontFamily: "inherit",
+                  boxSizing: "border-box",
                 }}
               />
             )}
 
+            {/* ── Error ── */}
             {error && (
-              <div
-                style={{
-                  marginTop: "14px",
-                  padding: "12px 16px",
-                  borderRadius: "12px",
-                  background: "#7f1d1d",
-                  border: "1px solid #dc2626",
-                  color: "#fecaca",
-                  fontSize: "13px",
-                }}
-              >
+              <div style={{
+                marginTop: "14px", padding: "12px 16px", borderRadius: "12px",
+                background: "#7f1d1d", border: "1px solid #dc2626",
+                color: "#fecaca", fontSize: "13px",
+              }}>
                 ⚠️ {error}
               </div>
             )}
 
+            {/* ── Analyze button ── */}
             <button
               onClick={handleAnalyze}
-              disabled={!docText}
+              disabled={!docText.trim()}
               style={{
-                width: "100%",
-                marginTop: "16px",
-                padding: "16px",
-                borderRadius: "14px",
-                border: "1px solid #334155",
-                background: docText
+                width: "100%", marginTop: "16px", padding: "16px",
+                borderRadius: "14px", border: "1px solid #334155",
+                background: docText.trim()
                   ? "linear-gradient(135deg,#334155,#475569)"
                   : "#0f172a",
-                color: docText ? "#f1f5f9" : "#475569",
-                fontSize: "15px",
-                fontWeight: 700,
-                cursor: docText ? "pointer" : "not-allowed",
-                boxShadow: docText
-                  ? "0 4px 24px rgba(2,6,23,0.6)"
-                  : "none",
+                color: docText.trim() ? "#f1f5f9" : "#475569",
+                fontSize: "15px", fontWeight: 700,
+                cursor: docText.trim() ? "pointer" : "not-allowed",
+                boxShadow: docText.trim() ? "0 4px 24px rgba(2,6,23,0.6)" : "none",
+                transition: "all 0.2s",
+                boxSizing: "border-box",
               }}
             >
               🔍 Analyze Document
             </button>
+
+            {/* ── Feature pills ── */}
+            <div style={{
+              display: "flex", gap: "8px", flexWrap: "wrap",
+              justifyContent: "center", marginTop: "24px",
+            }}>
+              {[
+                "⚡ Real-time Streaming",
+                "🗺️ Risk Heatmap",
+                "🤝 Negotiation Score",
+                "📂 Multi-file Upload",
+                "📊 Category Filtering",
+                "🕐 History Tracking",
+              ].map((f) => (
+                <span key={f} style={{
+                  padding: "5px 14px", borderRadius: "100px",
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px solid #1e293b",
+                  fontSize: "12px", color: "#475569",
+                }}>
+                  {f}
+                </span>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* STREAMING / RESULTS */}
+        {/* ── STREAMING / RESULTS VIEW ─────────────────────────────── */}
         {(isLoading || isDone) && (
           <div>
-            <div
-              style={{
-                background: "rgba(15,23,42,0.85)",
-                borderRadius: "20px",
-                padding: "24px",
-                marginBottom: "20px",
-                border: "1px solid #334155",
-                boxShadow: "0 10px 40px rgba(2,6,23,0.8)",
-                display: "flex",
-                gap: "20px",
-                alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
+
+            {/* Summary card */}
+            <div style={{
+              background: "rgba(15,23,42,0.85)", borderRadius: "20px",
+              padding: "24px", marginBottom: "20px",
+              border: "1px solid #334155",
+              boxShadow: "0 10px 40px rgba(2,6,23,0.8)",
+              display: "flex", gap: "20px",
+              alignItems: "center", flexWrap: "wrap",
+            }}>
               <RiskGauge
                 score={riskScore}
                 label={riskLabel || "Analyzing…"}
@@ -345,54 +286,155 @@ export default function Analyze() {
               />
 
               <div style={{ flex: 1, minWidth: "200px" }}>
+
+                {/* Progress bar while loading */}
+                {isLoading && (
+                  <div style={{ marginBottom: "14px" }}>
+                    <div style={{
+                      display: "flex", justifyContent: "space-between",
+                      marginBottom: "6px",
+                    }}>
+                      <span style={{
+                        fontSize: "13px", color: "#94a3b8", fontWeight: 600,
+                      }}>
+                        {progress.label || "Scanning document…"}
+                      </span>
+                      <span style={{
+                        fontSize: "13px", fontWeight: 700, color: "#f8fafc",
+                      }}>
+                        {progress.total > 0
+                          ? `${Math.round((progress.chunk / progress.total) * 100)}%`
+                          : "…"}
+                      </span>
+                    </div>
+                    <div style={{
+                      height: "5px", background: "#1e293b",
+                      borderRadius: "100px", overflow: "hidden",
+                    }}>
+                      <div style={{
+                        height: "100%", borderRadius: "100px",
+                        background: "linear-gradient(90deg,#475569,#94a3b8)",
+                        width: progress.total > 0
+                          ? `${(progress.chunk / progress.total) * 100}%`
+                          : "8%",
+                        transition: "width 0.5s ease",
+                      }} />
+                    </div>
+                  </div>
+                )}
+
+                {/* Summary text when done */}
                 {isDone && summary && (
-                  <p
-                    style={{
-                      fontSize: "13px",
-                      color: "#cbd5f5",
-                      lineHeight: 1.6,
-                      marginBottom: "12px",
-                    }}
-                  >
+                  <p style={{
+                    fontSize: "13px", color: "#94a3b8",
+                    lineHeight: 1.6, marginBottom: "12px",
+                  }}>
                     {summary}
                   </p>
                 )}
 
-                <div style={{ display: "flex", gap: "16px" }}>
-                  {["High", "Medium", "Low"].map((lvl) => (
+                {/* Live counts */}
+                <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+                  {[
+                    ["High",   "#ef4444"],
+                    ["Medium", "#f59e0b"],
+                    ["Low",    "#22c55e"],
+                  ].map(([lvl, color]) => (
                     <div key={lvl} style={{ textAlign: "center" }}>
-                      <div
-                        style={{
-                          fontSize: "24px",
-                          fontWeight: 800,
-                          color:
-                            lvl === "High"
-                              ? "#ef4444"
-                              : lvl === "Medium"
-                              ? "#f59e0b"
-                              : "#22c55e",
-                        }}
-                      >
+                      <div style={{
+                        fontSize: "24px", fontWeight: 800, color,
+                        transition: "all 0.3s",
+                      }}>
                         {counts[lvl]}
                       </div>
-                      <div style={{ fontSize: "11px", color: "#94a3b8" }}>
+                      <div style={{ fontSize: "11px", color: "#64748b" }}>
                         {lvl}
                       </div>
                     </div>
                   ))}
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{
+                      fontSize: "24px", fontWeight: 800, color: "#94a3b8",
+                    }}>
+                      {clauses.length}
+                    </div>
+                    <div style={{ fontSize: "11px", color: "#64748b" }}>
+                      Total
+                    </div>
+                  </div>
                 </div>
+              </div>
+
+              {/* Action buttons */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {isLoading && (
+                  <button onClick={cancel} style={{
+                    padding: "8px 16px", borderRadius: "10px",
+                    border: "1px solid #7f1d1d", background: "rgba(127,29,29,0.3)",
+                    color: "#fca5a5", fontWeight: 600, fontSize: "13px",
+                    cursor: "pointer",
+                  }}>
+                    ✕ Cancel
+                  </button>
+                )}
+                {isDone && (
+                  <button onClick={handleReset} style={{
+                    padding: "8px 16px", borderRadius: "10px",
+                    border: "1px solid #334155", background: "rgba(15,23,42,0.6)",
+                    color: "#94a3b8", fontWeight: 600, fontSize: "13px",
+                    cursor: "pointer",
+                  }}>
+                    + New Analysis
+                  </button>
+                )}
               </div>
             </div>
 
+            {/* ── Severity Heatmap (shows once we have clauses) ── */}
+            {clauses.length > 0 && (
+              <SeverityHeatmap clauses={clauses} isDark={true} />
+            )}
+
+            {/* ── Empty / scanning state ── */}
+            {isLoading && clauses.length === 0 && (
+              <div style={{
+                textAlign: "center", padding: "48px",
+                color: "#475569", fontSize: "14px",
+              }}>
+                <div
+                  className="analyzing-pulse"
+                  style={{ fontSize: "36px", marginBottom: "12px" }}
+                >
+                  ⚙️
+                </div>
+                Scanning document for risky clauses…
+              </div>
+            )}
+
+            {/* ── Live clause label ── */}
+            {clauses.length > 0 && (
+              <div style={{
+                fontSize: "11px", fontWeight: 700, color: "#475569",
+                textTransform: "uppercase", letterSpacing: "0.1em",
+                marginBottom: "12px", paddingLeft: "4px",
+              }}>
+                {isLoading
+                  ? `⚡ Live — ${clauses.length} clause${clauses.length !== 1 ? "s" : ""} found so far…`
+                  : `✅ ${clauses.length} risky clause${clauses.length !== 1 ? "s" : ""} identified`}
+              </div>
+            )}
+
+            {/* ── Clause cards stream in ── */}
             {clauses.map((clause, i) => (
               <div
                 key={clause.id || i}
                 className="clause-appear"
-                style={{ animationDelay: `${i * 0.05}s` }}
+                style={{ animationDelay: `${Math.min(i * 0.05, 0.5)}s` }}
               >
-                <ClauseCard clause={clause} />
+                <ClauseCard clause={clause} isDark={true} />
               </div>
             ))}
+
           </div>
         )}
       </div>
