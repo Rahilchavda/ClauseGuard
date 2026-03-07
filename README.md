@@ -1,6 +1,7 @@
 # ⚖️ ClauseGuard — AI Contract Risk Analyzer
 
 🔗 **Live Demo:** [https://clause-guard-nine.vercel.app](https://clause-guard-nine.vercel.app)
+
 ClauseGuard is an **AI-powered contract analysis platform** that helps users identify **risky clauses, ambiguous language, and legal red flags** before signing agreements.
 
 The system uses **LLM-powered reasoning** to analyze legal documents and provides:
