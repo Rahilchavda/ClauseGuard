@@ -14,7 +14,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",        # Vite dev server
         "https://*.vercel.app",          # your deployed frontend
-        "https://clauseguard.vercel.app",        
+        "https://clause-guard-nine.vercel.app",
+     
     ],
     allow_methods=["*"],
     allow_headers=["*"],
