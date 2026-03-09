@@ -5,20 +5,65 @@ import ClauseCard from "../components/ClauseCard";
 import { useThemeContext } from "../context/ThemeContext";
 import { exportToPdf } from "../utils/exportPdf";
 import SeverityHeatmap from "../components/SeverityHeatmap";
+
 export default function Results() {
   const location = useLocation();
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
   const { isDark } = useThemeContext();
-  const results = location.state?.results;
+  const results    = location.state?.results;
 
-  const [riskFilter, setRiskFilter] = useState("All");
-  const [catFilter, setCatFilter] = useState("All");
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("risk");
-
-  const [emailInput, setEmailInput] = useState("");
-  const [emailSent, setEmailSent] = useState(false);
+  const [riskFilter,   setRiskFilter]   = useState("All");
+  const [catFilter,    setCatFilter]    = useState("All");
+  const [search,       setSearch]       = useState("");
+  const [sortBy,       setSortBy]       = useState("risk");
+  const [emailInput,   setEmailInput]   = useState("");
+  const [emailSent,    setEmailSent]    = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
+
+  // ── Theme tokens ──────────────────────────────────────────────────
+  const t = {
+    pageBg:      isDark
+      ? "radial-gradient(circle at 20% 20%, #1e293b, #020617)"
+      : "#f8fafc",
+    cardBg:      isDark ? "rgba(15,23,42,0.85)" : "#ffffff",
+    cardBorder:  isDark ? "#334155"              : "#e2e8f0",
+    cardShadow:  isDark ? "0 8px 30px rgba(2,6,23,0.6)" : "0 2px 12px rgba(0,0,0,0.06)",
+    text:        isDark ? "#f8fafc"              : "#0f172a",
+    textSub:     isDark ? "#cbd5e1"              : "#475569",
+    textMuted:   isDark ? "#64748b"              : "#94a3b8",
+    inputBg:     isDark ? "rgba(255,255,255,0.04)" : "#f8fafc",
+    inputBorder: isDark ? "#334155"              : "#e2e8f0",
+    inputColor:  isDark ? "#e2e8f0"              : "#1e293b",
+    selectBg:    isDark ? "#1e293b"              : "#f8fafc",
+    filterActive:"linear-gradient(135deg,#334155,#475569)",
+    filterInactive: isDark ? "rgba(255,255,255,0.05)" : "#f1f5f9",
+    filterTextActive: "#fff",
+    filterTextInactive: isDark ? "#94a3b8" : "#64748b",
+  };
+
+  const card = {
+    background:   t.cardBg,
+    border:       `1px solid ${t.cardBorder}`,
+    borderRadius: "clamp(12px, 2vw, 16px)",
+    padding:      "clamp(14px, 3vw, 20px)",
+    boxShadow:    t.cardShadow,
+    boxSizing:    "border-box",
+    transition:   "background 0.3s, border-color 0.3s",
+  };
+
+  const filterBtn = (val, current) => ({
+    padding:      "clamp(5px, 1vw, 7px) clamp(10px, 2vw, 14px)",
+    borderRadius: "100px",
+    border:       `1px solid ${t.cardBorder}`,
+    fontWeight:   600,
+    fontSize:     "clamp(11px, 1.8vw, 12px)",
+    cursor:       "pointer",
+    background:   current === val ? t.filterActive : t.filterInactive,
+    color:        current === val ? t.filterTextActive : t.filterTextInactive,
+    whiteSpace:   "nowrap",
+    transition:   "all 0.15s",
+    fontFamily:   "inherit",
+  });
 
   const sendEmail = async () => {
     if (!emailInput || !results.id) return;
@@ -38,299 +83,280 @@ export default function Results() {
     }
   };
 
-  const card = {
-    background: isDark ? "rgba(15,23,42,0.85)" : "#ffffff",
-    border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`,
-    borderRadius: "16px",
-    padding: "20px",
-    boxShadow: isDark
-      ? "0 8px 30px rgba(2,6,23,0.6)"
-      : "0 2px 12px rgba(0,0,0,0.06)",
-  };
-
-  if (!results)
-    return (
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100vh",
-          background: isDark
-            ? "radial-gradient(circle at 20% 20%, #1e293b, #020617)"
-            : "#f8fafc",
-        }}
-      >
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "48px", marginBottom: "12px" }}>📊</div>
-
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: "18px",
-              color: isDark ? "#f8fafc" : "#0f172a",
-              marginBottom: "8px",
-            }}
-          >
-            No results yet
-          </div>
-
-          <p style={{ color: "#64748b", marginBottom: "20px" }}>
-            Run an analysis first.
-          </p>
-
-          <button
-            onClick={() => navigate("/")}
-            style={{
-              padding: "10px 24px",
-              borderRadius: "10px",
-              border: "1px solid #334155",
-              background: "linear-gradient(135deg,#334155,#475569)",
-              color: "#fff",
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Go Analyze →
-          </button>
+  // ── Empty state ───────────────────────────────────────────────────
+  if (!results) return (
+    <div style={{
+      display:        "flex",
+      alignItems:     "center",
+      justifyContent: "center",
+      minHeight:      "100vh",
+      padding:        "clamp(16px, 4vw, 32px)",
+      background:     t.pageBg,
+      boxSizing:      "border-box",
+    }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: "clamp(36px, 8vw, 48px)", marginBottom: "12px" }}>📊</div>
+        <div style={{
+          fontWeight:   700,
+          fontSize:     "clamp(16px, 3vw, 18px)",
+          color:        t.text,
+          marginBottom: "8px",
+          transition:   "color 0.3s",
+        }}>
+          No results yet
         </div>
+        <p style={{ color: t.textMuted, marginBottom: "20px", fontSize: "clamp(12px, 2vw, 14px)" }}>
+          Run an analysis first.
+        </p>
+        <button
+          onClick={() => navigate("/")}
+          style={{
+            padding:      "clamp(9px, 2vw, 11px) clamp(18px, 4vw, 26px)",
+            borderRadius: "10px",
+            border:       "1px solid #334155",
+            background:   "linear-gradient(135deg,#334155,#475569)",
+            color:        "#fff",
+            fontWeight:   700,
+            fontSize:     "clamp(13px, 2vw, 14px)",
+            cursor:       "pointer",
+            fontFamily:   "inherit",
+          }}
+        >
+          Go Analyze →
+        </button>
       </div>
-    );
+    </div>
+  );
 
   const counts = {
-    High: results.clauses.filter((c) => c.riskLevel === "High").length,
+    High:   results.clauses.filter((c) => c.riskLevel === "High").length,
     Medium: results.clauses.filter((c) => c.riskLevel === "Medium").length,
-    Low: results.clauses.filter((c) => c.riskLevel === "Low").length,
+    Low:    results.clauses.filter((c) => c.riskLevel === "Low").length,
   };
 
-  const categories = [
-    "All",
-    ...new Set(results.clauses.map((c) => c.category)),
-  ];
+  const categories = ["All", ...new Set(results.clauses.map((c) => c.category))];
 
   const displayed = useMemo(() => {
     let list = results.clauses;
-
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter(
-        (c) =>
-          c.originalText?.toLowerCase().includes(q) ||
-          c.reasoning?.toLowerCase().includes(q) ||
-          c.category?.toLowerCase().includes(q),
+      list = list.filter((c) =>
+        c.originalText?.toLowerCase().includes(q) ||
+        c.reasoning?.toLowerCase().includes(q) ||
+        c.category?.toLowerCase().includes(q),
       );
     }
-
-    if (riskFilter !== "All")
-      list = list.filter((c) => c.riskLevel === riskFilter);
-
-    if (catFilter !== "All")
-      list = list.filter((c) => c.category === catFilter);
-
+    if (riskFilter !== "All") list = list.filter((c) => c.riskLevel === riskFilter);
+    if (catFilter  !== "All") list = list.filter((c) => c.category  === catFilter);
     if (sortBy === "risk") {
       const order = { High: 0, Medium: 1, Low: 2 };
-      list = [...list].sort(
-        (a, b) => (order[a.riskLevel] ?? 3) - (order[b.riskLevel] ?? 3),
-      );
+      list = [...list].sort((a, b) => (order[a.riskLevel] ?? 3) - (order[b.riskLevel] ?? 3));
     } else {
-      list = [...list].sort((a, b) =>
-        (a.category || "").localeCompare(b.category || ""),
-      );
+      list = [...list].sort((a, b) => (a.category || "").localeCompare(b.category || ""));
     }
-
     return list;
   }, [results.clauses, search, riskFilter, catFilter, sortBy]);
 
-  const filterBtn = (val, current) => ({
-    padding: "6px 14px",
-    borderRadius: "100px",
-    border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`,
-    fontWeight: 600,
-    fontSize: "12px",
-    cursor: "pointer",
-    background:
-      current === val
-        ? "linear-gradient(135deg,#334155,#475569)"
-        : isDark
-          ? "rgba(255,255,255,0.05)"
-          : "#f1f5f9",
-    color: current === val ? "#fff" : isDark ? "#94a3b8" : "#64748b",
-  });
-
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        padding: "24px",
-        background: isDark
-          ? "radial-gradient(circle at 20% 20%, #1e293b, #020617)"
-          : "#f8fafc",
-      }}
-    >
+    <div style={{
+      minHeight:  "100vh",
+      padding:    "clamp(14px, 4vw, 28px)",
+      background: t.pageBg,
+      transition: "background 0.3s",
+      boxSizing:  "border-box",
+    }}>
       <div style={{ maxWidth: "860px", margin: "0 auto" }}>
-        {/* Summary */}
-        <div
-          style={{
-            ...card,
-            display: "flex",
-            gap: "20px",
-            flexWrap: "wrap",
-            marginBottom: "16px",
-          }}
-        >
-          <RiskGauge
-            score={results.riskScore}
-            label={results.riskLabel}
-            color={results.riskColor}
-          />
 
-          <div style={{ flex: 1, minWidth: "200px" }}>
-            <div
-              style={{
-                fontSize: "11px",
-                fontWeight: 700,
-                color: "#64748b",
-                textTransform: "uppercase",
-                letterSpacing: "0.1em",
-                marginBottom: "6px",
-              }}
-            >
-              <button
-                onClick={() => exportToPdf(results)}
-                style={{
-                  padding: "8px 18px",
-                  borderRadius: "10px",
-                  border: "none",
-                  background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
-                  color: "#fff",
-                  fontWeight: 700,
-                  fontSize: "13px",
-                  cursor: "pointer",
-                  marginTop: "10px",
-                  boxShadow: "0 4px 12px rgba(99,102,241,0.35)",
-                }}
-              >
-                📥 Export PDF Report
-              </button>
-              <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
-                <input
-                  value={emailInput}
-                  onChange={(e) => setEmailInput(e.target.value)}
-                  placeholder="your@email.com"
-                  style={{
-                    flex: 1,
-                    padding: "8px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #e2e8f0",
-                    fontSize: "13px",
-                    outline: "none",
-                  }}
-                />
-                <button
-                  onClick={sendEmail}
-                  disabled={emailLoading || emailSent}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: "8px",
-                    border: "none",
-                    background: emailSent ? "#22c55e" : "#6366f1",
-                    color: "#fff",
-                    fontWeight: 600,
-                    fontSize: "13px",
-                    cursor: "pointer",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {emailSent
-                    ? "✓ Sent!"
-                    : emailLoading
-                      ? "Sending…"
-                      : "📧 Email Report"}
-                </button>
-              </div>
+        {/* ── Summary card ── */}
+        <div style={{
+          ...card,
+          display:      "flex",
+          gap:          "clamp(14px, 3vw, 20px)",
+          flexWrap:     "wrap",
+          marginBottom: "clamp(12px, 2vw, 16px)",
+          alignItems:   "flex-start",
+        }}>
+          {/* Gauge */}
+          <div style={{ flexShrink: 0, display: "flex", justifyContent: "center" }}>
+            <RiskGauge
+              score={results.riskScore}
+              label={results.riskLabel}
+              color={results.riskColor}
+              isDark={isDark}
+            />
+          </div>
+
+          {/* Right side */}
+          <div style={{ flex: 1, minWidth: "clamp(200px, 40vw, 300px)" }}>
+
+            {/* Doc name */}
+            <div style={{
+              fontWeight:   700,
+              fontSize:     "clamp(13px, 2.5vw, 15px)",
+              color:        t.text,
+              marginBottom: "6px",
+              wordBreak:    "break-word",
+              transition:   "color 0.3s",
+            }}>
               {results.docName}
             </div>
 
-            <p
-              style={{
-                fontSize: "13px",
-                lineHeight: 1.6,
-                marginBottom: "14px",
-                color: isDark ? "#cbd5f5" : "#475569",
-              }}
-            >
+            {/* Summary text */}
+            <p style={{
+              fontSize:     "clamp(12px, 2vw, 13px)",
+              lineHeight:   1.65,
+              marginBottom: "clamp(10px, 2vw, 14px)",
+              color:        t.textSub,
+              wordBreak:    "break-word",
+              transition:   "color 0.3s",
+            }}>
               {results.summary}
             </p>
 
-            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-              {[
-                ["High", "#ef4444"],
-                ["Medium", "#f59e0b"],
-                ["Low", "#22c55e"],
-              ].map(([lvl, color]) => (
+            {/* Risk counts */}
+            <div style={{
+              display:      "flex",
+              gap:          "clamp(12px, 3vw, 20px)",
+              flexWrap:     "wrap",
+              marginBottom: "clamp(12px, 2vw, 16px)",
+            }}>
+              {[["High","#ef4444"],["Medium","#f59e0b"],["Low","#22c55e"]].map(([lvl, color]) => (
                 <div key={lvl} style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "24px", fontWeight: 800, color }}>
+                  <div style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color }}>
                     {counts[lvl]}
                   </div>
-                  <div style={{ fontSize: "11px", color: "#64748b" }}>
+                  <div style={{ fontSize: "clamp(10px, 1.5vw, 11px)", color: t.textMuted }}>
                     {lvl}
                   </div>
                 </div>
               ))}
-
               <div style={{ textAlign: "center" }}>
-                <div
-                  style={{
-                    fontSize: "24px",
-                    fontWeight: 800,
-                    color: "#94a3b8",
-                  }}
-                >
+                <div style={{ fontSize: "clamp(18px, 4vw, 24px)", fontWeight: 800, color: t.textSub }}>
                   {results.clauses.length}
                 </div>
-                <div style={{ fontSize: "11px", color: "#64748b" }}>Total</div>
+                <div style={{ fontSize: "clamp(10px, 1.5vw, 11px)", color: t.textMuted }}>Total</div>
               </div>
+            </div>
+
+            {/* Export PDF button */}
+            <button
+              onClick={() => exportToPdf(results)}
+              style={{
+                padding:      "clamp(8px, 1.5vw, 10px) clamp(14px, 3vw, 18px)",
+                borderRadius: "10px",
+                border:       "none",
+                background:   "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                color:        "#fff",
+                fontWeight:   700,
+                fontSize:     "clamp(12px, 2vw, 13px)",
+                cursor:       "pointer",
+                boxShadow:    "0 4px 12px rgba(99,102,241,0.35)",
+                marginBottom: "clamp(8px, 2vw, 12px)",
+                fontFamily:   "inherit",
+                whiteSpace:   "nowrap",
+              }}
+            >
+              📥 Export PDF Report
+            </button>
+
+            {/* Email report */}
+            <div style={{
+              display:   "flex",
+              gap:       "clamp(6px, 1.5vw, 8px)",
+              flexWrap:  "wrap",
+              alignItems:"center",
+            }}>
+              <input
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                placeholder="your@email.com"
+                style={{
+                  flex:         1,
+                  minWidth:     "clamp(120px, 30vw, 180px)",
+                  padding:      "clamp(7px, 1.5vw, 9px) clamp(10px, 2vw, 12px)",
+                  borderRadius: "8px",
+                  border:       `1px solid ${t.inputBorder}`,
+                  background:   t.inputBg,
+                  color:        t.inputColor,
+                  fontSize:     "clamp(12px, 2vw, 13px)",
+                  outline:      "none",
+                  boxSizing:    "border-box",
+                  fontFamily:   "inherit",
+                  transition:   "background 0.3s, border-color 0.3s",
+                }}
+              />
+              <button
+                onClick={sendEmail}
+                disabled={emailLoading || emailSent}
+                style={{
+                  padding:      "clamp(7px, 1.5vw, 9px) clamp(12px, 2.5vw, 16px)",
+                  borderRadius: "8px",
+                  border:       "none",
+                  background:   emailSent ? "#22c55e" : "#6366f1",
+                  color:        "#fff",
+                  fontWeight:   600,
+                  fontSize:     "clamp(12px, 2vw, 13px)",
+                  cursor:       emailLoading || emailSent ? "default" : "pointer",
+                  whiteSpace:   "nowrap",
+                  opacity:      emailLoading ? 0.7 : 1,
+                  fontFamily:   "inherit",
+                  transition:   "background 0.2s",
+                }}
+              >
+                {emailSent ? "✓ Sent!" : emailLoading ? "Sending…" : "📧 Email"}
+              </button>
             </div>
           </div>
         </div>
-        <div>
+
+        {/* ── Heatmap ── */}
+        <div style={{ marginBottom: "clamp(10px, 2vw, 14px)" }}>
           <SeverityHeatmap clauses={results.clauses} isDark={isDark} />
         </div>
-        {/* Search + Filters */}
-        <div style={{ ...card, marginBottom: "12px" }}>
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-              marginBottom: "14px",
-              flexWrap: "wrap",
-            }}
-          >
+
+        {/* ── Search + Filters ── */}
+        <div style={{ ...card, marginBottom: "clamp(8px, 2vw, 12px)" }}>
+
+          {/* Search + Sort row */}
+          <div style={{
+            display:      "flex",
+            gap:          "clamp(8px, 2vw, 10px)",
+            marginBottom: "clamp(10px, 2vw, 14px)",
+            flexWrap:     "wrap",
+          }}>
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="🔍 Search clauses, reasoning, categories..."
+              placeholder="🔍 Search clauses, reasoning, categories…"
               style={{
-                flex: 1,
-                minWidth: "200px",
-                padding: "9px 14px",
+                flex:         1,
+                minWidth:     "clamp(160px, 40vw, 220px)",
+                padding:      "clamp(8px, 1.5vw, 10px) clamp(10px, 2vw, 14px)",
                 borderRadius: "10px",
-                border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`,
-                background: isDark ? "rgba(255,255,255,0.04)" : "#f8fafc",
-                color: isDark ? "#e2e8f0" : "#1e293b",
-                fontSize: "13px",
+                border:       `1px solid ${t.inputBorder}`,
+                background:   t.inputBg,
+                color:        t.inputColor,
+                fontSize:     "clamp(12px, 2vw, 13px)",
+                outline:      "none",
+                boxSizing:    "border-box",
+                fontFamily:   "inherit",
+                transition:   "background 0.3s, border-color 0.3s",
               }}
             />
-
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
               style={{
-                padding: "9px 14px",
+                padding:      "clamp(8px, 1.5vw, 10px) clamp(10px, 2vw, 14px)",
                 borderRadius: "10px",
-                border: `1px solid ${isDark ? "#334155" : "#e2e8f0"}`,
-                background: isDark ? "#1e293b" : "#f8fafc",
-                color: isDark ? "#e2e8f0" : "#1e293b",
+                border:       `1px solid ${t.inputBorder}`,
+                background:   t.selectBg,
+                color:        t.inputColor,
+                fontSize:     "clamp(12px, 2vw, 13px)",
+                outline:      "none",
+                cursor:       "pointer",
+                fontFamily:   "inherit",
+                transition:   "background 0.3s, border-color 0.3s",
               }}
             >
               <option value="risk">Sort: Risk Level</option>
@@ -338,56 +364,45 @@ export default function Results() {
             </select>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "6px",
-              flexWrap: "wrap",
-              marginBottom: "8px",
-            }}
-          >
+          {/* Risk filter pills */}
+          <div style={{ display: "flex", gap: "clamp(4px, 1vw, 6px)", flexWrap: "wrap", marginBottom: "8px" }}>
             {["All", "High", "Medium", "Low"].map((r) => (
-              <button
-                key={r}
-                onClick={() => setRiskFilter(r)}
-                style={filterBtn(r, riskFilter)}
-              >
+              <button key={r} onClick={() => setRiskFilter(r)} style={filterBtn(r, riskFilter)}>
                 {r}
               </button>
             ))}
           </div>
 
-          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+          {/* Category filter pills */}
+          <div style={{ display: "flex", gap: "clamp(4px, 1vw, 6px)", flexWrap: "wrap" }}>
             {categories.map((c) => (
-              <button
-                key={c}
-                onClick={() => setCatFilter(c)}
-                style={filterBtn(c, catFilter)}
-              >
+              <button key={c} onClick={() => setCatFilter(c)} style={filterBtn(c, catFilter)}>
                 {c}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Results info */}
-        <div
-          style={{ fontSize: "12px", color: "#64748b", marginBottom: "12px" }}
-        >
+        {/* ── Results count ── */}
+        <div style={{
+          fontSize:     "clamp(11px, 2vw, 12px)",
+          color:        t.textMuted,
+          marginBottom: "clamp(8px, 2vw, 12px)",
+          transition:   "color 0.3s",
+        }}>
           Showing {displayed.length} of {results.clauses.length} clauses
           {search && ` matching "${search}"`}
         </div>
 
-        {/* Clauses */}
+        {/* ── Clause cards ── */}
         {displayed.length === 0 ? (
-          <div
-            style={{
-              ...card,
-              textAlign: "center",
-              padding: "48px",
-              color: "#64748b",
-            }}
-          >
+          <div style={{
+            ...card,
+            textAlign: "center",
+            padding:   "clamp(32px, 6vw, 48px)",
+            color:     t.textMuted,
+            fontSize:  "clamp(12px, 2vw, 13px)",
+          }}>
             No clauses match your filters.
           </div>
         ) : (
@@ -395,6 +410,7 @@ export default function Results() {
             <ClauseCard key={clause.id || i} clause={clause} isDark={isDark} />
           ))
         )}
+
       </div>
     </div>
   );
